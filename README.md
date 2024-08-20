@@ -1,14 +1,20 @@
 # Deploy Netflix Clone on Cloud using Jenkins - DevSecOps Project
 
+## Table of Contents
+1. [Phase 1: Initial Setup and Deployment](#phase-1-initial-setup-and-deployment)
+2. [Phase 2: Security](#phase-2-security)
+3. [Phase 3: CI/CD Setup](#phase-3-cicd-setup)
+4. [Phase 4: Monitoring](#phase-4-monitoring)
+5. [Phase 5: Notification](#phase-5-notification)
+6. [Phase 6: Kubernetes](#phase-6-kubernetes)
+
 ## Phase 1: Initial Setup and Deployment
 
 ### Step 1: Launch EC2 (Ubuntu 22.04)
-
-1. Provision an EC2 instance on AWS with Ubuntu 22.04.
-2. Connect to the instance using SSH.
+- Provision an EC2 instance on AWS with Ubuntu 22.04.
+- Connect to the instance using SSH.
 
 ### Step 2: Clone the Code
-
 Update all packages and clone the code repository:
 
 ```bash
@@ -16,7 +22,6 @@ git clone https://github.com/N4si/DevSecOps-Project.git
 ```
 
 ### Step 3: Install Docker and Run the App Using a Container
-
 Set up Docker on the EC2 instance:
 
 ```bash
@@ -35,16 +40,16 @@ docker run -d --name netflix -p 8081:80 netflix:latest
 ```
 
 To delete:
+
 ```bash
 docker stop <containerid>
 docker rmi -f netflix
 ```
 
-Note: It will show an error because you need an API key.
+**Note**: It will show an error because you need an API key.
 
 ### Step 4: Get the API Key
-
-1. Navigate to [TMDB (The Movie Database) website](https://www.themoviedb.org/).
+1. Navigate to TMDB (The Movie Database) website.
 2. Create an account and log in.
 3. Go to your profile and select "Settings."
 4. Click on "API" from the left-side panel.
@@ -87,7 +92,6 @@ trivy image <imageid>
 ```
 
 ### Integrate SonarQube and Configure
-
 - Integrate SonarQube with your CI/CD pipeline.
 - Configure SonarQube to analyze code for quality and security issues.
 
@@ -120,20 +124,16 @@ sudo systemctl enable jenkins
 Access Jenkins in a web browser using the public IP of your EC2 instance: `publicIp:8080`
 
 ### Install Necessary Plugins in Jenkins
-
 Go to Manage Jenkins → Plugins → Available Plugins and install:
-
-1. Eclipse Temurin Installer
-2. SonarQube Scanner
-3. NodeJs Plugin
-4. Email Extension Plugin
+- Eclipse Temurin Installer
+- SonarQube Scanner
+- NodeJs Plugin
+- Email Extension Plugin
 
 ### Configure Java and Nodejs in Global Tool Configuration
-
 Go to Manage Jenkins → Tools → Install JDK(17) and NodeJs(16) → Click on Apply and Save
 
 ### SonarQube Configuration
-
 1. Create a token in SonarQube
 2. Add the token to Jenkins (Manage Jenkins → Credentials → Add Secret Text)
 3. Configure SonarQube server in Jenkins (Configure System)
@@ -141,7 +141,6 @@ Go to Manage Jenkins → Tools → Install JDK(17) and NodeJs(16) → Click on A
 5. Create a Jenkins webhook
 
 ### Create a CI/CD Pipeline in Jenkins
-
 Create a new pipeline job and use the following pipeline script:
 
 ```groovy
@@ -190,7 +189,6 @@ pipeline {
 ```
 
 ### Install Dependency-Check and Docker Tools in Jenkins
-
 1. Install OWASP Dependency-Check Plugin
 2. Configure Dependency-Check Tool
 3. Install Docker Tools and Docker Plugins
@@ -288,268 +286,205 @@ sudo systemctl restart jenkins
 ### Install Prometheus
 
 1. Create a dedicated Linux user for Prometheus:
-
-```bash
-sudo useradd --system --no-create-home --shell /bin/false prometheus
-wget https://github.com/prometheus/prometheus/releases/download/v2.47.1/prometheus-2.47.1.linux-amd64.tar.gz
-```
+   ```bash
+   sudo useradd --system --no-create-home --shell /bin/false prometheus
+   wget https://github.com/prometheus/prometheus/releases/download/v2.47.1/prometheus-2.47.1.linux-amd64.tar.gz
+   ```
 
 2. Extract Prometheus files, move them, and create directories:
-
-```bash
-tar -xvf prometheus-2.47.1.linux-amd64.tar.gz
-cd prometheus-2.47.1.linux-amd64/
-sudo mkdir -p /data /etc/prometheus
-sudo mv prometheus promtool /usr/local/bin/
-sudo mv consoles/ console_libraries/ /etc/prometheus/
-sudo mv prometheus.yml /etc/prometheus/prometheus.yml
-```
+   ```bash
+   tar -xvf prometheus-2.47.1.linux-amd64.tar.gz
+   cd prometheus-2.47.1.linux-amd64/
+   sudo mkdir -p /data /etc/prometheus
+   sudo mv prometheus promtool /usr/local/bin/
+   sudo mv consoles/ console_libraries/ /etc/prometheus/
+   sudo mv prometheus.yml /etc/prometheus/prometheus.yml
+   ```
 
 3. Set ownership for directories:
-
-```bash
-sudo chown -R prometheus:prometheus /etc/prometheus/ /data/
-```
+   ```bash
+   sudo chown -R prometheus:prometheus /etc/prometheus/ /data/
+   ```
 
 4. Create a systemd unit configuration file for Prometheus:
+   ```bash
+   sudo nano /etc/systemd/system/prometheus.service
+   ```
 
-```bash
-sudo nano /etc/systemd/system/prometheus.service
-```
+   Add the following content:
 
-Add the following content:
+   ```ini
+   [Unit]
+   Description=Prometheus
+   Wants=network-online.target
+   After=network-online.target
 
-```ini
-[Unit]
-Description=Prometheus
-Wants=network-online.target
-After=network-online.target
+   StartLimitIntervalSec=500
+   StartLimitBurst=5
 
-StartLimitIntervalSec=500
-StartLimitBurst=5
+   [Service]
+   User=prometheus
+   Group=prometheus
+   Type=simple
+   Restart=on-failure
+   RestartSec=5s
+   ExecStart=/usr/local/bin/prometheus \
+     --config.file=/etc/prometheus/prometheus.yml \
+     --storage.tsdb.path=/data \
+     --web.console.templates=/etc/prometheus/consoles \
+     --web.console.libraries=/etc/prometheus/console_libraries \
+     --web.listen-address=0.0.0.0:9090 \
+     --web.enable-lifecycle
 
-[Service]
-User=prometheus
-Group=prometheus
-Type=simple
-Restart=on-failure
-RestartSec=5s
-ExecStart=/usr/local/bin/prometheus \
-  --config.file=/etc/prometheus/prometheus.yml \
-  --storage.tsdb.path=/data \
-  --web.console.templates=/etc/prometheus/consoles \
-  --web.console.libraries=/etc/prometheus/console_libraries \
-  --web.listen-address=0.0.0.0:9090 \
-  --web.enable-lifecycle
-
-[Install]
-WantedBy=multi-user.target
-```
+   [Install]
+   WantedBy=multi-user.target
+   ```
 
 5. Enable and start Prometheus:
-
-```bash
-sudo systemctl enable prometheus
-sudo systemctl start prometheus
-```
+   ```bash
+   sudo systemctl enable prometheus
+   sudo systemctl start prometheus
+   ```
 
 6. Verify Prometheus's status:
+   ```bash
+   sudo systemctl status prometheus
+   ```
 
-```bash
-sudo systemctl status prometheus
-```
-
-Access Prometheus in a web browser: `http://<your-server-ip>:9090`
+7. Access Prometheus in a web browser: `http://<your-server-ip>:9090`
 
 ### Install Node Exporter
 
 1. Create a system user for Node Exporter and download it:
-
-```bash
-sudo useradd --system --no-create-home --shell /bin/false node_exporter
-wget https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
-```
+   ```bash
+   sudo useradd --system --no-create-home --shell /bin/false node_exporter
+   wget https://github.com/prometheus/node_exporter/releases/download/v1.6.1/node_exporter-1.6.1.linux-amd64.tar.gz
+   ```
 
 2. Extract Node Exporter files, move the binary, and clean up:
-
-```bash
-tar -xvf node_exporter-1.6.1.linux-amd64.tar.gz
-sudo mv node_exporter-1.6.1.linux-amd64/node_exporter /usr/local/bin/
-rm -rf node_exporter*
-```
+   ```bash
+   tar -xvf node_exporter-1.6.1.linux-amd64.tar.gz
+   sudo mv node_exporter-1.6.1.linux-amd64/node_exporter /usr/local/bin/
+   rm -rf node_exporter*
+   ```
 
 3. Create a systemd unit configuration file for Node Exporter:
+   ```bash
+   sudo nano /etc/systemd/system/node_exporter.service
+   ```
 
-```bash
-sudo nano /etc/systemd/system/node_exporter.service
-```
+   Add the following content:
 
-Add the following content:
+   ```ini
+   [Unit]
+   Description=Node Exporter
+   Wants=network-online.target
+   After=network-online.target
 
-```ini
-[Unit]
-Description=Node Exporter
-Wants=network-online.target
-After=network-online.target
+   StartLimitIntervalSec=500
+   StartLimitBurst=5
 
-StartLimitIntervalSec=500
-StartLimitBurst=5
+   [Service]
+   User=node_exporter
+   Group=node_exporter
+   Type=simple
+   Restart=on-failure
+   RestartSec=5s
+   ExecStart=/usr/local/bin/node_exporter --collector.logind
 
-[Service]
-User=node_exporter
-Group=node_exporter
-Type=simple
-Restart=on-failure
-RestartSec=5s
-ExecStart=/usr/local/bin/node_exporter --collector.logind
-
-[Install]
-WantedBy=multi-user.target
-```
+   [Install]
+   WantedBy=multi-user.target
+   ```
 
 4. Enable and start Node Exporter:
-
-```bash
-sudo systemctl enable node_exporter
-sudo systemctl start node_exporter
-```
+   ```bash
+   sudo systemctl enable node_exporter
+   sudo systemctl start node_exporter
+   ```
 
 5. Verify the Node Exporter's status:
-
-```bash
-sudo systemctl status node_exporter
-```
+   ```bash
+   sudo systemctl status node_exporter
+   ```
 
 ### Configure Prometheus
 
-Update the `prometheus.yml` file:
+1. Update the prometheus.yml file:
 
-```yaml
-global:
-  scrape_interval: 15s
+   ```yaml
+   global:
+     scrape_interval: 15s
 
-scrape_configs:
-  - job_name: 'node_exporter'
-    static_configs:
-      - targets: ['localhost:9100']
+   scrape_configs:
+     - job_name: 'node_exporter'
+       static_configs:
+         - targets: ['localhost:9100']
 
-  - job_name: 'jenkins'
-    metrics_path: '/prometheus'
-    static_configs:
-      - targets: ['<your-jenkins-ip>:<your-jenkins-port>']
-```
+     - job_name: 'jenkins'
+       metrics_path: '/prometheus'
+       static_configs:
+         - targets: ['<your-jenkins-ip>:<your-jenkins-port>']
+   ```
 
-Check the validity of the configuration file:
+2. Check the validity of the configuration file:
+   ```bash
+   promtool check config /etc/prometheus/prometheus.yml
+   ```
 
-```bash
-promtool check config /etc/prometheus/prometheus.yml
-```
+3. Reload the Prometheus configuration:
+   ```bash
+   curl -X POST http://localhost:9090/-/reload
+   ```
 
-Reload the Prometheus configuration:
-
-```bash
-curl -X POST http://localhost:9090/-/reload
-```
-
-Access Prometheus targets at: `http://<your-prometheus-ip>:9090/targets`
+4. Access Prometheus targets at: `http://<your-prometheus-ip>:9090/targets`
 
 ### Install Grafana
 
 1. Install dependencies:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y apt-transport-https software-properties-common
-```
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y apt-transport-https software-properties-common
+   ```
 
 2. Add the GPG key for Grafana:
-
-```bash
-wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
-```
+   ```bash
+   wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+   ```
 
 3. Add the repository for Grafana stable releases:
-
-```bash
-echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
-```
+   ```bash
+   echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+   ```
 
 4. Update and install Grafana:
-
-```bash
-sudo apt-get update
-sudo apt-get -y install grafana
-```
+   ```bash
+   sudo apt-get update
+   sudo apt-get -y install grafana
+   ```
 
 5. Enable and start Grafana service:
-
-```bash
-sudo systemctl enable grafana-server
-sudo systemctl start grafana-server
-```
+   ```bash
+   sudo systemctl enable grafana-server
+   sudo systemctl start grafana-server
+   ```
 
 6. Check Grafana status:
-
-```bash
-sudo systemctl status grafana-server
-```
+   ```bash
+   sudo systemctl status grafana-server
+   ```
 
 7. Access Grafana web interface:
+   - Open a web browser and navigate to: `http://<your-server-ip>:3000`
+   - Default login: username "admin", password "admin"
+   - Change the default password when prompted.
 
-Open a web browser and navigate to: `http://<your-server-ip>:3000`
+8. Add Prometheus data source:
+   - Click on the gear icon (⚙️) in the left sidebar
+   - Select "Data Sources"
+   - Click on "Add data source"
+   - Choose "Prometheus"
+   - Set the "URL" to `http://localhost:9090`
+   - Click "Save & Test"
 
-Default login: username "admin", password "admin"
-
-8. Change the default password when prompted.
-
-9. Add Prometheus data source:
-
-- Click on the gear icon (⚙️) in the left sidebar
-- Select "Data Sources"
-- Click on "Add data source"
-- Choose "Prometheus"
-- Set the "URL" to `http://localhost:9090`
-- Click "Save & Test"
-
-10. Import a dashboard:
-
-- Click on the "+" icon in the left sidebar
-- Select "Dashboard"
-- Click on "Import" dashboard option
-- Enter the dashboard code (e.g., 1860)
-- Click "Load"
-- Select the Prometheus data source
-- Click "Import"
-
-## Phase 5: Notification
-
-Implement email notifications in Jenkins or other notification mechanisms.
-
-## Phase 6: Kubernetes
-
-### Create Kubernetes Cluster with Nodegroups
-
-Set up a Kubernetes cluster with node groups for a scalable environment.
-
-### Monitor Kubernetes with Prometheus
-
-Use Prometheus to monitor your Kubernetes cluster.
-
-### Install Node Exporter using Helm
-
-1. Add the Prometheus Community Helm repository:
-
-```bash
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-```
-
-2. Create a Kubernetes namespace for the Node Exporter:
-
-```bash
-kubectl create namespace prometheus-node-exporter
-```
-
-3. Install the Node Exporter using Helm:
-
-```bash
-helm install prometheus-node-exporter prometheus-community/prometheus-node-exporter --namespace
+9. Import a dashboard:
+   - Click on the "+"
