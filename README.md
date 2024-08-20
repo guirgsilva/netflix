@@ -7,6 +7,7 @@
 4. [Phase 4: Monitoring](#phase-4-monitoring)
 5. [Phase 5: Notification](#phase-5-notification)
 6. [Phase 6: Kubernetes](#phase-6-kubernetes)
+7. [Phase 7: Cleanup](#phase-7-cleanup)
 
 ## Phase 1: Initial Setup and Deployment
 
@@ -487,4 +488,89 @@ sudo systemctl restart jenkins
    - Click "Save & Test"
 
 9. Import a dashboard:
-   - Click on the "+"
+   - Click on the "+" icon in the left sidebar
+   - Select "Dashboard"
+   - Click on "Import" dashboard option
+   - Enter the dashboard code (e.g., 1860)
+   - Click "Load"
+   - Select the Prometheus data source
+   - Click "Import"
+
+## Phase 5: Notification
+
+Implement email notifications in Jenkins or other notification mechanisms.
+
+## Phase 6: Kubernetes
+
+### Create Kubernetes Cluster with Nodegroups
+Set up a Kubernetes cluster with node groups for a scalable environment.
+
+### Monitor Kubernetes with Prometheus
+Use Prometheus to monitor your Kubernetes cluster.
+
+### Install Node Exporter using Helm
+
+1. Add the Prometheus Community Helm repository:
+   ```bash
+   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+   ```
+
+2. Create a Kubernetes namespace for the Node Exporter:
+   ```bash
+   kubectl create namespace prometheus-node-exporter
+   ```
+
+3. Install the Node Exporter using Helm:
+   ```bash
+   helm install prometheus-node-exporter prometheus-community/prometheus-node-exporter --namespace prometheus-node-exporter
+   ```
+
+### Add a Job to Scrape Metrics in prometheus.yml
+
+Update your Prometheus configuration (prometheus.yml) to add a new job for scraping metrics:
+
+```yaml
+  - job_name: 'Netflix'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['node1Ip:9100']
+```
+
+Replace 'node1Ip' with the actual IP of your node. Don't forget to reload or restart Prometheus to apply these changes.
+
+### Deploy Application with ArgoCD
+
+1. Install ArgoCD:
+   Follow the instructions provided in the EKS Workshop documentation to install ArgoCD on your Kubernetes cluster.
+
+2. Set Your GitHub Repository as a Source:
+   Configure the connection to your repository and define the source for your ArgoCD application.
+
+3. Create an ArgoCD Application:
+   - Set the name for your application.
+   - Define the destination where your application should be deployed.
+   - Specify the project the application belongs to.
+   - Set the source of your application, including the GitHub repository URL, revision, and the path to the application within the repository.
+   - Configure the sync policy, including automatic syncing, pruning, and self-healing.
+
+4. Access your Application:
+   To access the app, ensure port 30007 is open in your security group, then open a new tab and navigate to `NodeIP:30007`. Your app should be running.
+
+## Phase 7: Cleanup
+
+### Cleanup AWS EC2 Instances
+Terminate AWS EC2 instances that are no longer needed.
+
+## Conclusion
+
+This project demonstrates a comprehensive DevSecOps pipeline for deploying a Netflix clone application. It covers various aspects including initial setup, security scanning, CI/CD pipeline configuration, monitoring, and deployment to Kubernetes. By following these steps, you can create a robust, secure, and scalable deployment process for your applications.
+
+## Additional Resources
+
+- [Jenkins Documentation](https://www.jenkins.io/doc/)
+- [SonarQube Documentation](https://docs.sonarqube.org/)
+- [Docker Documentation](https://docs.docker.com/)
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [ArgoCD Documentation](https://argo-cd.readthedocs.io/)
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [Grafana Documentation](https://grafana.com/docs/)
